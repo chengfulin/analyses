@@ -2,7 +2,11 @@
   "name": "analyses",
   "description": "basic data flow analyses framework based on esprima",
   "version": "0.2.1",
-  "keywords": ["DFA", "data flow analysis", "esprima"],
+  "keywords": [
+    "DFA",
+    "data flow analysis",
+    "esprima"
+  ],
   "main": "./index",
   "maintainers": [
     "Arpad Borsos <arpad.borsos@googlemail.com> (http://swatinem.de)"
@@ -15,13 +19,13 @@
     "esgraph": "~ 0.1.1"
   },
   "devDependencies": {
-    "esprima": "~ 1.0",
-    "esgraph": "~ 0.1.1",
-    "istanbul": "*",
-    "mocha": "*",
-    "should": "*",
     "coveralls": "*",
-    "jshint": "*"
+    "esgraph": "~ 0.1.1",
+    "esprima": "~ 1.0",
+    "istanbul": "^0.3.13",
+    "jshint": "*",
+    "mocha": "*",
+    "should": "*"
   },
   "scripts": {
     "test": "make test-coveralls"
