@@ -39,12 +39,21 @@ describe('KILL set', function () {
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;'
         ));
-        /// KILL set of the entry node should be empty set
-        ReachDefinitions.KILL(cfg[0].astNode).values().length.should.eql(0);
-        /// KILL set of the exit node should be empty set
-        ReachDefinitions.KILL(cfg[1].astNode).values().length.should.eql(0);
         /// KILL set of the AssignmentExpression node
-        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.containEql('x');
+        var actual = ReachDefinitions.KILL(cfg[2][2].astNode).values();
+        actual.length.should.eql(1);
+        actual.should.containEql('x');
+    });
+
+    it('Should work with object', function () {
+        var cfg = esgraph(esprima.parse(
+            'var obj = {};\n' +
+            'obj.prop = 123;'
+        ));
+        /// KILL set of the AssignmentExpression of object MemberExpression
+        var actual = ReachDefinitions.KILL(cfg[2][2].astNode).values();
+        actual.length.should.eql(1);
+        actual.should.containEql('obj');
     });
 });
 
@@ -58,6 +67,17 @@ describe('GEN set', function () {
         /// GEN set of the exit node should be empty set
         ReachDefinitions.GEN(cfg[1].astNode).values().length.should.eql(0);
         /// GEN set of the VariableDeclaration node should be empty set
-        ReachDefinitions.GEN(cfg[2][1].astNode).values().should.containEql('x', 'y', 'tmp');
+        var actual = ReachDefinitions.GEN(cfg[2][1].astNode).values();
+        actual.length.should.eql(3);
+        actual.should.containEql('x', 'y', 'tmp');
+    });
+
+    it('Should work with redefinition', function () {
+        var cfg = esgraph(esprima.parse(
+            'var x = 55, y = 10, tmp = 0;\n' +
+            'x = 66;'
+        ));
+        /// GEN set of the AssignmentExpression node should be empty set
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().length.should.eql(0);
     });
 });
