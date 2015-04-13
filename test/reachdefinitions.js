@@ -7,154 +7,311 @@ var ReachDefinitions = require('../lib/examples/reachdefinitions');
 var Set = require('../lib/set');
 
 /**
- * Do reach definitions analysis
- * @param code source code
- * @returns reach definitions of start node
+ * Get the CFG of the script code
+ * @param code
+ * @returns CFG
  */
-function doAnalysis(code) {
+function getCFG(code) {
     var ast = esprima.parse(code);
-    var cfg = esgraph(ast);
-    var output = ReachDefinitions(cfg);
-    return output.get(cfg[2][1]);/// start node
+    return esgraph(ast);
+}
+
+/**
+ * Do reach definitions analysis
+ * @param cfg CFG of the source code
+ * @returns reach definitions of all nodes
+ */
+function doAnalysis(cfg) {
+    return ReachDefinitions(cfg);
 }
 
 /**
  * Test suites
  */
-describe('KILL set', function () {
-    it('Should work for declaration only', function () {
-        var cfg = esgraph(esprima.parse(
-            'var x = 55, y = 10, tmp = 0;\n'
-        ));
-        /// KILL set of the entry node should be empty set
-        ReachDefinitions.KILL(cfg[0].astNode).values().length.should.eql(0);
-        /// KILL set of the exit node should be empty set
-        ReachDefinitions.KILL(cfg[1].astNode).values().length.should.eql(0);
-        /// KILL set of the VariableDeclaration node should be empty set
-        ReachDefinitions.KILL(cfg[2][1].astNode).values().length.should.eql(0);
+describe('Reach Definitions', function () {
+    it('should work for declaration only', function () {
+        var cfg = getCFG('var x = 55, y = 10, tmp = 0;\n'),
+            output = doAnalysis(cfg);
+        /// RD(entry) should be empty
+        output.get(cfg[0]).values().should.be.empty;
+        /// RD(exit) should be {x, y, tmp}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.length.should.eql(3);
+        exitRD.should.containEql('x', 'y', 'tmp');
+        /// RD(n1) should be {x, y, tmp}
+        var n1RD = output.get(cfg[2][1]).values();
+        n1RD.length.should.eql(3);
+        n1RD.should.containEql('x', 'y', 'tmp');
     });
 
-    it('Should work for redefinition', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for redefinition', function () {
+        var cfg = getCFG('var x = 55, y = 10, tmp = 0;\n' +
+                         'x = 66;\n' +
+                         'y = tmp = 1;'),
+            output = doAnalysis(cfg);
+        /// RD(exit) should be {x, y, tmp}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.length.should.eql(3);
+        exitRD.should.containEql('x', 'y', 'tmp');
+        /// RD(n1) should be {x, y, tmp}
+        var n1RD = output.get(cfg[2][2]).values();
+        n1RD.length.should.eql(3);
+        n1RD.should.containEql('x', 'y', 'tmp');
+        /// RD(n2) should be {x, y, tmp}
+        var n2RD = output.get(cfg[2][3]).values();
+        n2RD.length.should.eql(3);
+        n2RD.should.containEql('x', 'y', 'tmp');
+    });
+
+    it('should work for update expression', function () {
+        var cfg = getCFG(
+                'var x = 5;\n' +
+                '++x;'
+            ),
+            output = doAnalysis(cfg);
+        //// RD(exit) should be {x}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.should.eql(['x']);
+        /// RD(n1) should be {x}
+        var n1RD = output.get(cfg[2][1]).values();
+        n1RD.should.eql(['x']);
+        /// RD(n2) should be {x}
+        var n2RD = output.get(cfg[2][2]).values();
+        n2RD.should.eql(['x']);
+    });
+
+    it('should work for obj', function () {
+       var cfg = getCFG(
+               'var obj = {};\n' +
+               'obj.prop = 123;'
+           ),
+           output = doAnalysis(cfg);
+        /// RD(exit) should be {obj}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.should.eql(['obj']);
+        /// RD(n1) should be {obj}
+        var n1RD = output.get(cfg[2][1]).values();
+        n1RD.should.eql(['obj']);
+        /// RD(n2) should be {obj}
+        var n2RD = output.get(cfg[2][2]).values();
+        n2RD.should.eql(['obj']);
+    });
+
+    it('should work for branches', function () {
+        var cfg = getCFG(
+                'var x = 20, y = 5;\n' +
+                'if (x > y) {\n' +
+                'var z = 10;\n' +
+                'x = x % y;\n' +
+                '} else {\n' +
+                'y = x;\n' +
+                '}'
+            ),
+            output = doAnalysis(cfg);
+        /// RD(exit) should be {x, y}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.length.should.eql(3);
+        exitRD.should.containEql('x', 'y', 'z');
+        /// RD(n3) should be {x, y}
+        var n3RD = output.get(cfg[2][3]).values();
+        n3RD.length.should.eql(3);
+        n3RD.should.containEql('x', 'y', 'z');
+        /// RD(n4) should be {x, y, z}
+        var n4RD = output.get(cfg[2][4]).values();
+        n4RD.length.should.eql(3);
+        n4RD.should.containEql('x', 'y', 'z');
+        /// RD(n5) should be {x, y}
+        var n5RD = output.get(cfg[2][5]).values();
+        n5RD.length.should.eql(2);
+        n5RD.should.containEql('x', 'y');
+    });
+
+    it('should work for loops', function () {
+        var cfg = getCFG(
+                'var x = 5, y = 0;\n' +
+                'while(x > 0) {\n' +
+                'y += x;\n' +
+                '--x;\n' +
+                'var z = x;\n' +
+                '}'
+            ),
+            output = doAnalysis(cfg);
+        /// RD(exit) should be {x, y, z}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.length.should.eql(3);
+        exitRD.should.containEql('x', 'y', 'z');
+        /// RD(n3) should be {x, y, z}
+        /// variable z can reach n3 (y += x),
+        /// since there is a path from its definition (n5) to n3
+        var n3RD = output.get(cfg[2][3]).values();
+        n3RD.length.should.eql(3);
+        n3RD.should.containEql('x', 'y', 'z');
+        /// RD(n5) should be {x, y, z}
+        var n5RD = output.get(cfg[2][5]).values();
+        n5RD.length.should.eql(3);
+        n5RD.should.containEql('x', 'y', 'z');
+    });
+});
+
+describe('KILL set', function () {
+    it('should work for declaration only', function () {
+        var cfg = getCFG(
+            'var x = 55, y = 10, tmp = 0;\n'
+        );
+        /// KILL set of the entry node should be empty set
+        ReachDefinitions.KILL(cfg[0].astNode).values().should.be.empty;
+        /// KILL set of the exit node should be empty set
+        ReachDefinitions.KILL(cfg[1].astNode).values().should.be.empty;
+        /// KILL set of the VariableDeclaration node should be empty set
+        ReachDefinitions.KILL(cfg[2][1].astNode).values().should.be.empty;
+    });
+
+    it('should work for redefinition', function () {
+        var cfg = getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
-        ));
+        );
         /// KILL set of the AssignmentExpression node
-        var killOfAssign = ReachDefinitions.KILL(cfg[2][2].astNode).values();
-        killOfAssign.length.should.eql(1);
-        killOfAssign.should.containEql('x');
+        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.eql(['x']);
         /// KILL set of assignment chain
-        var killOfAssignChain = ReachDefinitions.KILL(cfg[2][3].astNode).values();
-        killOfAssignChain.length.should.eql(2);
-        killOfAssignChain.should.containEql('y', 'tmp');
+        ReachDefinitions.KILL(cfg[2][3].astNode).values().should.eql(['y', 'tmp']);
     });
 
-    it('Should work for update expression', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for update expression', function () {
+        var cfg = getCFG(
             'var x = 5;\n' +
             '++x;'
-        ));
+        );
         /// KILL set of UpdateExpression node
-        var killOfUpdate = ReachDefinitions.KILL(cfg[2][2].astNode).values();
-        killOfUpdate.length.should.eql(1);
-        killOfUpdate.should.containEql('x');
+        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.eql(['x']);
     });
 
-    it('Should work for object', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for object property assignment', function () {
+        var cfg = getCFG(
             'var obj = {};\n' +
             'obj.prop = 123;'
-        ));
+        );
         /// KILL set of the AssignmentExpression of object MemberExpression
-        var killOfPropDef = ReachDefinitions.KILL(cfg[2][2].astNode).values();
-        killOfPropDef.length.should.eql(1);
-        killOfPropDef.should.containEql('obj');
+        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.eql(['obj']);
     });
 
-    it('Should work for branches', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for branches', function () {
+        var cfg = getCFG(
             'var x = 20, y = 5;\n' +
             'if (x > y) {\n' +
+                'var z = 10;' +
                 'x = x % y;\n' +
             '} else {\n' +
                 'y = x;\n' +
             '}'
-        ));
-        /// KILL set of the node of one branch
-        var killedInIf = ReachDefinitions.KILL(cfg[2][3].astNode).values();
-        killedInIf.length.should.eql(1);
-        killedInIf.should.containEql('x');
-        /// KILL set of the node of another branch
-        var killedInElse = ReachDefinitions.KILL(cfg[2][4].astNode).values();
-        killedInElse.length.should.eql(1);
-        killedInElse.should.containEql('y');
+        );
+        /// KILL set of the fist statement in the If statement
+        ReachDefinitions.KILL(cfg[2][3].astNode).values().should.be.empty;
+        /// KILL set of the second statement in the If statement
+        ReachDefinitions.KILL(cfg[2][4].astNode).values().should.eql(['x']);
+        /// KILL set of the node of the statement in the Else statement
+        ReachDefinitions.KILL(cfg[2][5].astNode).values().should.eql(['y']);
     });
 
-    it('Should work for loops', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for loops', function () {
+        var cfg = getCFG(
             'var x = 5, y = 0;\n' +
             'while(x > 0) {\n' +
                 'y += x;\n' +
                 '--x;\n' +
+                'var z = x;\n' +
             '}'
-        ));
+        );
         /// KILL set of node inside loop
-        var killInLoop = ReachDefinitions.KILL(cfg[2][3].astNode).values();
-        killInLoop.length.should.eql(1);
-        killInLoop.should.containEql('y');
+        ReachDefinitions.KILL(cfg[2][3].astNode).values().should.eql(['y']);
+        /// KILL set of the last node indes the loop
+        ReachDefinitions.KILL(cfg[2][5].astNode).values().should.be.empty;
     });
 });
 
 describe('GEN set', function () {
-    it('Should work for declaration only', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for declaration only', function () {
+        var cfg = getCFG(
             'var x = 55, y = 10, tmp = 0;\n'
-        ));
+        );
         /// GEN set of the entry node should be empty set
         ReachDefinitions.GEN(cfg[0].astNode).values().length.should.eql(0);
         /// GEN set of the exit node should be empty set
         ReachDefinitions.GEN(cfg[1].astNode).values().length.should.eql(0);
         /// GEN set of the VariableDeclaration node should be empty set
-        var genOfDeclare = ReachDefinitions.GEN(cfg[2][1].astNode).values();
-        genOfDeclare.length.should.eql(3);
-        genOfDeclare.should.containEql('x', 'y', 'tmp');
+        ReachDefinitions.GEN(cfg[2][1].astNode).values().should.eql(['x', 'y', 'tmp']);
     });
 
-    it('Should work for redefinition', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for redefinition', function () {
+        var cfg = getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
-        ));
+        );
         /// GEN set of the AssignmentExpression node
-        var genOfAssign = ReachDefinitions.GEN(cfg[2][2].astNode).values();
-        genOfAssign.length.should.eql(1);
-        genOfAssign.should.containEql('x');
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().should.eql(['x']);
         /// GEN set of chain of assignment
-        var genOfAssignChain = ReachDefinitions.GEN(cfg[2][3].astNode).values();
-        genOfAssignChain.length.should.eql(2);
-        genOfAssignChain.should.containEql('y', 'tmp');
+        ReachDefinitions.GEN(cfg[2][3].astNode).values().should.eql(['y', 'tmp']);
     });
 
-    it('Should work for object declaration', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for object declaration', function () {
+        var cfg = getCFG(
             'var x = 1, obj = {p: "prop"};'
-        ));
+        );
         /// GEN set of the VariableDeclaration node with object initialization
-        var genOfDeclare = ReachDefinitions.GEN(cfg[2][1].astNode).values();
-        genOfDeclare.length.should.eql(2);
-        genOfDeclare.should.containEql('x', 'obj');
+        ReachDefinitions.GEN(cfg[2][1].astNode).values().should.eql(['x', 'obj']);
     });
 
-    it('Should work for update expression', function () {
-        var cfg = esgraph(esprima.parse(
+    it('should work for object property assignment', function () {
+        var cfg = getCFG(
+            'var obj = {};\n' +
+            'obj.prop = 123;'
+        );
+        /// GEN set of the AssignmentExpression of object MemberExpression
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().should.eql(['obj']);
+    });
+
+
+    it('should work for update expression', function () {
+        var cfg = getCFG(
             'var x = 5;\n' +
             'x++;'
-        ));
+        );
         /// GEN set of the UpdateExpression node
-        var genOfUpdate = ReachDefinitions.GEN(cfg[2][2].astNode).values();
-        genOfUpdate.length.should.eql(1);
-        genOfUpdate.should.containEql('x');
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().should.eql(['x']);
+    });
+
+    it('should work for branches', function () {
+        var cfg = getCFG(
+            'var x = 20, y = 5;\n' +
+            'if (x > y) {\n' +
+            'var z = 10;' +
+            'x = x % y;\n' +
+            '} else {\n' +
+            'y = x;\n' +
+            '}'
+        );
+        /// GEN set of the fist statement in the If statement
+        ReachDefinitions.GEN(cfg[2][3].astNode).values().should.eql(['z']);
+        /// GEN set of the second statement in the If statement
+        ReachDefinitions.GEN(cfg[2][4].astNode).values().should.eql(['x']);
+        /// GEN set of the node of the statement in the Else statement
+        ReachDefinitions.GEN(cfg[2][5].astNode).values().should.eql(['y']);
+    });
+
+    it('should work for loops', function () {
+        var cfg = getCFG(
+            'var x = 5, y = 0;\n' +
+            'while(x > 0) {\n' +
+            'y += x;\n' +
+            '--x;\n' +
+            'var z = x;\n' +
+            '}'
+        );
+        /// GEN set of node inside loop
+        ReachDefinitions.GEN(cfg[2][3].astNode).values().should.eql(['y']);
+        /// GEN set of the last node indes the loop
+        ReachDefinitions.GEN(cfg[2][5].astNode).values().should.eql(['z']);
     });
 });
