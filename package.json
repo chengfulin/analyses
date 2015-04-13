@@ -9,7 +9,8 @@
   ],
   "main": "./index",
   "maintainers": [
-    "Arpad Borsos <arpad.borsos@googlemail.com> (http://swatinem.de)"
+    "Arpad Borsos <arpad.borsos@googlemail.com> (http://swatinem.de)",
+    "ChengFu Lin <chengfulin0806@gmail.com>"
   ],
   "dependencies": {
     "walkes": "~ 0.2.0"
