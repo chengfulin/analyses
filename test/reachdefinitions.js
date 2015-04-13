@@ -206,9 +206,11 @@ describe('KILL set', function () {
                 'y = x;\n' +
             '}'
         );
-        /// KILL set of the fist statement in the If statement
+        /// KILL set of the test of the if statement
+        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.be.empty;
+        /// KILL set of the fist statement when test for If statement is true
         ReachDefinitions.KILL(cfg[2][3].astNode).values().should.be.empty;
-        /// KILL set of the second statement in the If statement
+        /// KILL set of the second statement when test for If statement is true
         ReachDefinitions.KILL(cfg[2][4].astNode).values().should.eql(['x']);
         /// KILL set of the node of the statement in the Else statement
         ReachDefinitions.KILL(cfg[2][5].astNode).values().should.eql(['y']);
@@ -223,6 +225,8 @@ describe('KILL set', function () {
                 'var z = x;\n' +
             '}'
         );
+        /// KILL set of the test of the loop
+        ReachDefinitions.KILL(cfg[2][2].astNode).values().should.be.empty;
         /// KILL set of node inside loop
         ReachDefinitions.KILL(cfg[2][3].astNode).values().should.eql(['y']);
         /// KILL set of the last node indes the loop
@@ -292,6 +296,8 @@ describe('GEN set', function () {
             'y = x;\n' +
             '}'
         );
+        /// GEN set of the node only binary expression should be empty
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().should.be.empty;
         /// GEN set of the fist statement in the If statement
         ReachDefinitions.GEN(cfg[2][3].astNode).values().should.eql(['z']);
         /// GEN set of the second statement in the If statement
@@ -309,6 +315,8 @@ describe('GEN set', function () {
             'var z = x;\n' +
             '}'
         );
+        /// GEN set of node for the test of the loop
+        ReachDefinitions.GEN(cfg[2][2].astNode).values().should.be.empty;
         /// GEN set of node inside loop
         ReachDefinitions.GEN(cfg[2][3].astNode).values().should.eql(['y']);
         /// GEN set of the last node indes the loop
