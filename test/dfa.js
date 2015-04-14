@@ -83,28 +83,30 @@ describe('DFA', function () {
             'var test = 3, out;\n' +
             'switch (test) {\n' +
             'case 1:\n' +
-            'out = test;\n' +
-            'break;\n' +
+                'out = test;\n' +
+                'break;\n' +
             'case 2:\n' +
-            'out = test * test;\n' +
-            'break;\n' +
+                'out = test * test;\n' +
+                'break;\n' +
             'case 3:\n' +
-            'out = test * test * test;\n' +
-            'break;\n' +
+                'out = test * test * test;\n' +
+                'break;\n' +
             'case 4:\n' +
             'case 5:\n' +
-            'out = 0;\n' +
-            'break;\n' +
+                'out = 0;\n' +
+                'break;\n' +
             'default:\n' +
-            'out = -1;\n' +
+                'out = -1;\n' +
             '}\n' +
             'var tmp = out;'
         );
         /// define 'out' in case '1'
         cfg[2][2].astNode.test.value.should.eql(1);
         DFA.LastDEFs(cfg[2][3], 'out').values().should.eql([3]);
+        DFA.LastDEFs(cfg[2][3], 'test').values().should.eql([1]);
         /// get last def of 'out' at node 'var tmp = out'
         DFA.LastDEFs(cfg[2][4], 'out').values().should.eql([3, 7, 9, 11, 14]);
+        DFA.LastDEFs(cfg[2][4], 'test').values().should.eql([1]);
         /// define 'out' in case '2'
         cfg[2][6].astNode.test.value.should.eql(2);
         DFA.LastDEFs(cfg[2][7], 'out').values().should.eql([7]);
@@ -118,6 +120,47 @@ describe('DFA', function () {
         DFA.LastDEFs(cfg[2][11], 'out').values().should.eql([11]);
         /// define 'out' in 'default' case
         DFA.LastDEFs(cfg[2][14], 'out').values().should.eql([14]);
+    });
+
+    it('should work for update expression', function () {
+        var cfg = getCFG(
+            'var x = 5;\n' +
+            '++x;'
+        );
+        /// Get last def of 'x' at node '++x'
+        DFA.LastDEFs(cfg[2][2], 'x').values().should.eql([2]);
+    });
+
+    it('should work for object property assignment', function () {
+        var cfg = getCFG(
+            'var obj = {};\n' +
+            'obj.prop = 123;'
+        );
+        /// Get last def of 'obj' at node 'obj.prop = 123'
+        DFA.LastDEFs(cfg[2][2], 'obj').values().should.eql([2]);
+    });
+
+    it('should work for loops', function () {
+        var cfg = getCFG(
+            'var x = 5, y = 0;\n' +
+            'while(x > 0) {\n' +
+                'y += x;\n' +
+                '--x;\n' +
+                'var z = x;\n' +
+            '}'
+        );
+        /// Get the last def of 'x' at node 'while(x > 0)'
+        var lastDefN2 = DFA.LastDEFs(cfg[2][2], 'x').values();
+        lastDefN2.length.should.eql(2);
+        lastDefN2.should.containEql(1, 4);
+        /// Get the last def of 'x' at node 'y += x'
+        var lastDefN3 = DFA.LastDEFs(cfg[2][3], 'x').values();
+        lastDefN3.length.should.eql(2);
+        lastDefN3.should.containEql(1, 4);
+        /// Get the last def of 'y' at node 'while(x > 0)'
+        DFA.LastDEFs(cfg[2][3], 'y').values().should.eql([3]);
+        /// Get the last def of 'z' at node 'var z = x'
+        DFA.LastDEFs(cfg[2][5], 'z').values().should.eql([5]);
     });
 });
 
