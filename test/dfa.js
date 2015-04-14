@@ -424,12 +424,75 @@ describe('USE set', function () {
         /// USE should be empty when declaration with literals
         DFA.USE(cfg[2][1].astNode).values().should.be.empty;
         /// when initialized with another variable
-        var n2USE = DFA.USE(cfg[2][2].astNode).values();
+        var n2USE = DFA.USE(cfg[2][2]).values();
         n2USE.length.should.eql(1);
         n2USE.should.containEql('x');
         /// when chained with other variables
-        var n3USE = DFA.USE(cfg[2][3].astNode).values();
+        var n3USE = DFA.USE(cfg[2][3]).values();
         n3USE.length.should.eql(2);
         n3USE.should.containEql('z', 'y');
+    });
+
+    it('should work for redefinition', function () {
+        var cfg = getCFG(
+            'var x = 55, y = 10, tmp = 0;\n' +
+            'x = 66;\n' +
+            'y = tmp = 1;'
+        );
+        /// USE should be empty as redefined by literal value
+        DFA.USE(cfg[2][2]).values().should.be.empty;
+        /// variable should be used when used as assignment
+        DFA.USE(cfg[2][3]).values().should.eql(['tmp']);
+    });
+
+    it('should work for object property assignment', function () {
+        var cfg = getCFG(
+            'var out, obj = {prop: 123};\n' +
+            'out = obj.prop;'
+        );
+        /// object should be used when object property used as assignment
+        DFA.USE(cfg[2][2]).values().should.eql(['obj']);
+    });
+
+    it('should work for update expression', function () {
+        var cfg = getCFG(
+            'var x = 5;\n' +
+            'x++;'
+        );
+        /// update expression should in USE
+        DFA.USE(cfg[2][2]).values().should.eql(['x']);
+    });
+
+    it('should work for branches', function () {
+        var cfg = getCFG(
+            'var x = 20, y = 5;\n' +
+            'if (x > y) {\n' +
+                'var z = 10;' +
+                'x = x % y;\n' +
+            '} else {\n' +
+                'y = x;\n' +
+            '}'
+        );
+        /// n2 has p-uses {x, y}
+        DFA.USE(cfg[2][2]).values().should.eql(['x','y']);
+        /// binary expression in one branch
+        DFA.USE(cfg[2][4]).values().should.eql(['x', 'y']);
+        /// assignment in another branch
+        DFA.USE(cfg[2][5]).values().should.eql(['x']);
+    });
+
+    it('should work for loops', function () {
+        var cfg = getCFG(
+            'var x = 5, y = 0;\n' +
+            'while(x > 0) {\n' +
+                'y += x;\n' +
+                '--x;\n' +
+                'var z = x;\n' +
+            '}'
+        );
+        /// p-use in while statement
+        DFA.USE(cfg[2][2]).values().should.eql(['x']);
+        /// increment in loop
+        DFA.USE(cfg[2][3]).values().should.eql(['y', 'x']);
     });
 });
