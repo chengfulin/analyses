@@ -413,3 +413,23 @@ describe('GEN set', function () {
         DFA.GEN(cfg[2][14].astNode).values().should.eql(['out']);
     });
 });
+
+describe('USE set', function () {
+    it('should work for declaration only', function () {
+        var cfg = getCFG(
+            'var x = 55, y = 10, tmp = 0;\n' +
+            'var z = x;\n' +
+            'var q = z = y;'
+        );
+        /// USE should be empty when declaration with literals
+        DFA.USE(cfg[2][1].astNode).values().should.be.empty;
+        /// when initialized with another variable
+        var n2USE = DFA.USE(cfg[2][2].astNode).values();
+        n2USE.length.should.eql(1);
+        n2USE.should.containEql('x');
+        /// when chained with other variables
+        var n3USE = DFA.USE(cfg[2][3].astNode).values();
+        n3USE.length.should.eql(2);
+        n3USE.should.containEql('z', 'y');
+    });
+});
