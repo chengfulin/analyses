@@ -101,18 +101,18 @@ describe('Reach Definitions', function () {
         var cfg = getCFG(
                 'var x = 20, y = 5;\n' +
                 'if (x > y) {\n' +
-                'var z = 10;\n' +
-                'x = x % y;\n' +
+                    'var z = 10;\n' +
+                    'x = x % y;\n' +
                 '} else {\n' +
-                'y = x;\n' +
+                    'y = x;\n' +
                 '}'
             ),
             output = doAnalysis(cfg);
-        /// RD(exit) should be {x, y}
+        /// RD(exit) should be {x, y, z}
         var exitRD = output.get(cfg[1]).values();
         exitRD.length.should.eql(3);
         exitRD.should.containEql('x', 'y', 'z');
-        /// RD(n3) should be {x, y}
+        /// RD(n3) should be {x, y, z}
         var n3RD = output.get(cfg[2][3]).values();
         n3RD.length.should.eql(3);
         n3RD.should.containEql('x', 'y', 'z');
@@ -130,9 +130,9 @@ describe('Reach Definitions', function () {
         var cfg = getCFG(
                 'var x = 5, y = 0;\n' +
                 'while(x > 0) {\n' +
-                'y += x;\n' +
-                '--x;\n' +
-                'var z = x;\n' +
+                    'y += x;\n' +
+                    '--x;\n' +
+                    'var z = x;\n' +
                 '}'
             ),
             output = doAnalysis(cfg);
@@ -150,5 +150,42 @@ describe('Reach Definitions', function () {
         var n5RD = output.get(cfg[2][5]).values();
         n5RD.length.should.eql(3);
         n5RD.should.containEql('x', 'y', 'z');
+    });
+
+    it('should work with switch', function () {
+        var cfg = getCFG(
+                'var test = 3, out;\n' +
+                'switch (test) {\n' +
+                'case 1:\n' +
+                    'out = test;\n' +
+                    'break;\n' +
+                'case 2:\n' +
+                    'out = test * test;\n' +
+                    'break;\n' +
+                'case 3:\n' +
+                    'out = test * test * test;\n' +
+                    'break;\n' +
+                'case 4:\n' +
+                'case 5:\n' +
+                    'out = 0;\n' +
+                    'break;\n' +
+                'default:\n' +
+                    'out = -1;\n' +
+                '}\n' +
+                'var tmp = out;'
+            ),
+            output = doAnalysis(cfg);
+        /// RD(exit) should be {test, out, tmp}
+        var exitRD = output.get(cfg[1]).values();
+        exitRD.length.should.eql(3);
+        exitRD.should.containEql('test', 'out', 'tmp');
+        /// RD(n4) should be {test, out, tmp} where n4 is the node 'var tmp = out'
+        var n4RD = output.get(cfg[2][4]).values();
+        n4RD.length.should.eql(3);
+        n4RD.should.containEql('test', 'out', 'tmp');
+        /// RD(n10) should be {test, out} where n10 is the node 'out = 0'
+        var n10RD = output.get(cfg[2][10]).values();
+        n10RD.length.should.eql(2);
+        n10RD.should.containEql('test', 'out');
     });
 });
