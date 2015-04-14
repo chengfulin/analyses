@@ -77,6 +77,48 @@ describe('DFA', function () {
         /// Get last def of 'x' at node 'y = x'
         DFA.LastDEFs(cfg[2][5], 'y').values().should.eql([5]);
     });
+
+    it('should work with switch', function () {
+        var cfg = getCFG(
+            'var test = 3, out;\n' +
+            'switch (test) {\n' +
+            'case 1:\n' +
+            'out = test;\n' +
+            'break;\n' +
+            'case 2:\n' +
+            'out = test * test;\n' +
+            'break;\n' +
+            'case 3:\n' +
+            'out = test * test * test;\n' +
+            'break;\n' +
+            'case 4:\n' +
+            'case 5:\n' +
+            'out = 0;\n' +
+            'break;\n' +
+            'default:\n' +
+            'out = -1;\n' +
+            '}\n' +
+            'var tmp = out;'
+        );
+        /// define 'out' in case '1'
+        cfg[2][2].astNode.test.value.should.eql(1);
+        DFA.LastDEFs(cfg[2][3], 'out').values().should.eql([3]);
+        /// get last def of 'out' at node 'var tmp = out'
+        DFA.LastDEFs(cfg[2][4], 'out').values().should.eql([3, 7, 9, 11, 14]);
+        /// define 'out' in case '2'
+        cfg[2][6].astNode.test.value.should.eql(2);
+        DFA.LastDEFs(cfg[2][7], 'out').values().should.eql([7]);
+        /// define 'out' in case '3'
+        cfg[2][8].astNode.test.value.should.eql(3);
+        DFA.LastDEFs(cfg[2][9], 'out').values().should.eql([9]);
+        /// define 'out' in case '4'
+        cfg[2][10].astNode.test.value.should.eql(4);
+        /// define 'out' in case '5'
+        cfg[2][12].astNode.test.value.should.eql(5);
+        DFA.LastDEFs(cfg[2][11], 'out').values().should.eql([11]);
+        /// define 'out' in 'default' case
+        DFA.LastDEFs(cfg[2][14], 'out').values().should.eql([14]);
+    });
 });
 
 describe('KILL set', function () {
@@ -157,6 +199,46 @@ describe('KILL set', function () {
         DFA.KILL(cfg[2][3].astNode).values().should.eql(['y']);
         /// KILL set of the last node indes the loop
         DFA.KILL(cfg[2][5].astNode).values().should.be.empty;
+    });
+
+    it('should work with switch', function () {
+        var cfg = getCFG(
+            'var test = 3, out;\n' +
+            'switch (test) {\n' +
+            'case 1:\n' +
+                'out = test;\n' +
+                'break;\n' +
+            'case 2:\n' +
+                'out = test * test;\n' +
+                'break;\n' +
+            'case 3:\n' +
+                'out = test * test * test;\n' +
+                'break;\n' +
+            'case 4:\n' +
+            'case 5:\n' +
+                'out = 0;\n' +
+                'break;\n' +
+            'default:\n' +
+                'out = -1;\n' +
+            '}\n' +
+            'var tmp = out;'
+        );
+        /// define 'out' in case '1'
+        cfg[2][2].astNode.test.value.should.eql(1);
+        DFA.KILL(cfg[2][3].astNode).values().should.eql(['out']);
+        /// define 'out' in case '2'
+        cfg[2][6].astNode.test.value.should.eql(2);
+        DFA.KILL(cfg[2][7].astNode).values().should.eql(['out']);
+        /// define 'out' in case '3'
+        cfg[2][8].astNode.test.value.should.eql(3);
+        DFA.KILL(cfg[2][9].astNode).values().should.eql(['out']);
+        /// define 'out' in case '4'
+        cfg[2][10].astNode.test.value.should.eql(4);
+        /// define 'out' in case '5'
+        cfg[2][12].astNode.test.value.should.eql(5);
+        DFA.KILL(cfg[2][11].astNode).values().should.eql(['out']);
+        /// define 'out' in 'default' case
+        DFA.KILL(cfg[2][14].astNode).values().should.eql(['out']);
     });
 });
 
@@ -247,5 +329,44 @@ describe('GEN set', function () {
         DFA.GEN(cfg[2][3].astNode).values().should.eql(['y']);
         /// GEN set of the last node indes the loop
         DFA.GEN(cfg[2][5].astNode).values().should.eql(['z']);
+    });
+
+    it('should work with switch', function () {
+        var cfg = getCFG(
+            'var test = 3, out;\n' +
+            'switch (test) {\n' +
+            'case 1:\n' +
+                'out = test;\n' +
+                'break;\n' +
+            'case 2:\n' +
+                'out = test * test;\n' +
+                'break;\n' +
+            'case 3:\n' +
+                'out = test * test * test;\n' +
+                'break;\n' +
+            'case 4:\n' +
+            'case 5:\n' +
+                'out = 0;\n' +
+                'break;\n' +
+            'default:\n' +
+                'out = -1;\n' +
+            '}\n' +
+            'var tmp = out;'
+        );
+        cfg[2][2].astNode.test.value.should.eql(1);
+        DFA.GEN(cfg[2][3].astNode).values().should.eql(['out']);
+        /// define 'out' in case '2'
+        cfg[2][6].astNode.test.value.should.eql(2);
+        DFA.GEN(cfg[2][7].astNode).values().should.eql(['out']);
+        /// define 'out' in case '3'
+        cfg[2][8].astNode.test.value.should.eql(3);
+        DFA.GEN(cfg[2][9].astNode).values().should.eql(['out']);
+        /// define 'out' in case '4'
+        cfg[2][10].astNode.test.value.should.eql(4);
+        /// define 'out' in case '5'
+        cfg[2][12].astNode.test.value.should.eql(5);
+        DFA.GEN(cfg[2][11].astNode).values().should.eql(['out']);
+        /// define 'out' in 'default' case
+        DFA.GEN(cfg[2][14].astNode).values().should.eql(['out']);
     });
 });
