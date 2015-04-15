@@ -1,37 +1,13 @@
 /**
  * Created by chengfulin on 2015/4/13.
  */
-var esprima = require('esprima');
-var esgraph = require('esgraph');
-var DFA = require('../lib/examples/dfa');
-var Set = require('../lib/set');
-
-/**
- * Get the CFG of the script code
- * @param code
- * @returns CFG
- */
-function getCFG(code) {
-    var ast = esprima.parse(code);
-    return addCFGIds(esgraph(ast));
-}
-
-/**
- * Add Id to each CFG node
- * @param cfg the CFG to be modified
- * @returns CFG
- */
-function addCFGIds(cfg) {
-    for(var index = 0; index < cfg[2].length; ++index) {
-        (cfg[2][index]).cfgId = index;
-    }
-
-    return cfg;
-}
+var DFA = require('../lib/examples/dfa'),
+    Set = require('../lib/set'),
+    cfgext = require('../lib/examples/cfgext');
 
 describe('DFA', function () {
     it('should work for variable declaration only', function () {
-        var cfg = getCFG('var x = 55, y = 10, tmp = 0;\n');
+        var cfg = cfgext.getCFG('var x = 55, y = 10, tmp = 0;\n');
         /// Get last def of 'x' at 'n1'
         DFA.LastDEFs(cfg[2][1], 'x').values().should.eql([1]);
         /// Get last def of 'y' at 'n1'
@@ -41,7 +17,7 @@ describe('DFA', function () {
     });
 
     it('should work for redefinition', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
@@ -55,7 +31,7 @@ describe('DFA', function () {
     });
 
     it('should work for branches', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
                 'var x = 20, y = 5;\n' +
                 'if (x > y) {\n' +
                     'var z = 10;\n' +
@@ -79,7 +55,7 @@ describe('DFA', function () {
     });
 
     it('should work with switch', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var test = 3, out;\n' +
             'switch (test) {\n' +
             'case 1:\n' +
@@ -123,7 +99,7 @@ describe('DFA', function () {
     });
 
     it('should work for update expression', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5;\n' +
             '++x;'
         );
@@ -132,7 +108,7 @@ describe('DFA', function () {
     });
 
     it('should work for object property assignment', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var obj = {};\n' +
             'obj.prop = 123;'
         );
@@ -141,7 +117,7 @@ describe('DFA', function () {
     });
 
     it('should work for loops', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5, y = 0;\n' +
             'while(x > 0) {\n' +
                 'y += x;\n' +
@@ -166,7 +142,7 @@ describe('DFA', function () {
 
 describe('KILL set', function () {
     it('should work for declaration only', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n'
         );
         /// KILL set of the entry node should be empty set
@@ -178,7 +154,7 @@ describe('KILL set', function () {
     });
 
     it('should work for redefinition', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
@@ -190,7 +166,7 @@ describe('KILL set', function () {
     });
 
     it('should work for update expression', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5;\n' +
             '++x;'
         );
@@ -199,7 +175,7 @@ describe('KILL set', function () {
     });
 
     it('should work for object property assignment', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var obj = {};\n' +
             'obj.prop = 123;'
         );
@@ -208,7 +184,7 @@ describe('KILL set', function () {
     });
 
     it('should work for branches', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 20, y = 5;\n' +
             'if (x > y) {\n' +
             'var z = 10;' +
@@ -228,7 +204,7 @@ describe('KILL set', function () {
     });
 
     it('should work for loops', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5, y = 0;\n' +
             'while(x > 0) {\n' +
             'y += x;\n' +
@@ -245,7 +221,7 @@ describe('KILL set', function () {
     });
 
     it('should work with switch', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var test = 3, out;\n' +
             'switch (test) {\n' +
             'case 1:\n' +
@@ -287,7 +263,7 @@ describe('KILL set', function () {
 
 describe('GEN set', function () {
     it('should work for declaration only', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n'
         );
         /// GEN set of the entry node should be empty set
@@ -299,7 +275,7 @@ describe('GEN set', function () {
     });
 
     it('should work for redefinition', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
@@ -311,7 +287,7 @@ describe('GEN set', function () {
     });
 
     it('should work for object declaration', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 1, obj = {p: "prop"};'
         );
         /// GEN set of the VariableDeclaration node with object initialization
@@ -319,7 +295,7 @@ describe('GEN set', function () {
     });
 
     it('should work for object property assignment', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var obj = {};\n' +
             'obj.prop = 123;'
         );
@@ -329,7 +305,7 @@ describe('GEN set', function () {
 
 
     it('should work for update expression', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5;\n' +
             'x++;'
         );
@@ -338,7 +314,7 @@ describe('GEN set', function () {
     });
 
     it('should work for branches', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 20, y = 5;\n' +
             'if (x > y) {\n' +
             'var z = 10;' +
@@ -358,7 +334,7 @@ describe('GEN set', function () {
     });
 
     it('should work for loops', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5, y = 0;\n' +
             'while(x > 0) {\n' +
             'y += x;\n' +
@@ -375,7 +351,7 @@ describe('GEN set', function () {
     });
 
     it('should work with switch', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var test = 3, out;\n' +
             'switch (test) {\n' +
             'case 1:\n' +
@@ -416,7 +392,7 @@ describe('GEN set', function () {
 
 describe('USE set', function () {
     it('should work for declaration only', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'var z = x;\n' +
             'var q = z = y;'
@@ -434,7 +410,7 @@ describe('USE set', function () {
     });
 
     it('should work for redefinition', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 55, y = 10, tmp = 0;\n' +
             'x = 66;\n' +
             'y = tmp = 1;'
@@ -446,7 +422,7 @@ describe('USE set', function () {
     });
 
     it('should work for object property assignment', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var out, obj = {prop: 123};\n' +
             'out = obj.prop;'
         );
@@ -455,7 +431,7 @@ describe('USE set', function () {
     });
 
     it('should work for update expression', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5;\n' +
             'x++;'
         );
@@ -464,7 +440,7 @@ describe('USE set', function () {
     });
 
     it('should work for branches', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 20, y = 5;\n' +
             'if (x > y) {\n' +
                 'var z = 10;' +
@@ -482,7 +458,7 @@ describe('USE set', function () {
     });
 
     it('should work for loops', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var x = 5, y = 0;\n' +
             'while(x > 0) {\n' +
                 'y += x;\n' +
@@ -497,7 +473,7 @@ describe('USE set', function () {
     });
 
     it('should work for call expression', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var argu;\n' +
             'obj.method(argu);\n' +
             'fun(argu);'
@@ -517,7 +493,7 @@ describe('USE set', function () {
     });
 
     it('should work with switch', function () {
-        var cfg = getCFG(
+        var cfg = cfgext.getCFG(
             'var test = 3, out;\n' +
             'switch (test) {\n' +
             'case 1:\n' +
