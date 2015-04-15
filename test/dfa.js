@@ -495,4 +495,75 @@ describe('USE set', function () {
         /// increment in loop
         DFA.USE(cfg[2][3]).values().should.eql(['y', 'x']);
     });
+
+    it('should work for call expression', function () {
+        var cfg = getCFG(
+            'var argu;\n' +
+            'obj.method(argu);\n' +
+            'fun(argu);'
+        );
+        var n2USE = DFA.USE(cfg[2][2]).values();
+        n2USE.length.should.eql(2);
+        /// the object which owns called method should be in USE
+        n2USE.should.containEql('obj');
+        /// passed argument should be in USE
+        n2USE.should.containEql('argu');
+        var n3USE = DFA.USE(cfg[2][3]).values();
+        n3USE.length.should.eql(2);
+        /// the callee function should be in USE
+        n3USE.should.containEql('fun');
+        /// passed argument should be in USE
+        n3USE.should.containEql('argu');
+    });
+
+    it('should work with switch', function () {
+        var cfg = getCFG(
+            'var test = 3, out;\n' +
+            'switch (test) {\n' +
+            'case 1:\n' +
+                'out = test;\n' +
+                'break;\n' +
+            'case 2:\n' +
+                'out = test * test;\n' +
+                'break;\n' +
+            'case 3:\n' +
+                'out = test * test * test;\n' +
+                'break;\n' +
+            'case 4:\n' +
+            'case 5:\n' +
+                'out = 0;\n' +
+                'break;\n' +
+            'default:\n' +
+                'out = -1;\n' +
+            '}\n' +
+            'var tmp = out;'
+        );
+        /// variable 'test' should be used in each switch case node
+        /// switch case 1
+        cfg[2][2].astNode.test.value.should.eql(1);
+        DFA.USE(cfg[2][2]).values().should.eql(['test']);
+        /// switch case 2
+        cfg[2][6].astNode.test.value.should.eql(2);
+        DFA.USE(cfg[2][6]).values().should.eql(['test']);
+        /// switch case 3
+        cfg[2][8].astNode.test.value.should.eql(3);
+        DFA.USE(cfg[2][8]).values().should.eql(['test']);
+        /// switch case 4
+        cfg[2][10].astNode.test.value.should.eql(4);
+        /// switch case 5
+        cfg[2][12].astNode.test.value.should.eql(5);
+        DFA.USE(cfg[2][10]).values().should.eql(['test']);
+        DFA.USE(cfg[2][12]).values().should.eql(['test']);
+        /// variable used in consequence of switch case
+        /// in case 1
+        DFA.USE(cfg[2][3]).values().should.eql(['test']);
+        /// in case 2
+        DFA.USE(cfg[2][7]).values().should.eql(['test']);
+        /// in case 3
+        DFA.USE(cfg[2][9]).values().should.eql(['test']);
+        /// in case 4, 5
+        DFA.USE(cfg[2][11]).values().should.be.empty;
+        /// variable used outside the switch
+        DFA.USE(cfg[2][4]).values().should.eql(['out']);
+    });
 });
