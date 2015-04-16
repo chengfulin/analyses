@@ -137,7 +137,7 @@ describe('Def-Use Analysis', function () {
 
     it('should work for function call', function () {
         var cfg = cfgext.getCFG(
-                'var argu;\n' +
+                'var argu, obj = {method: function () {}};\n' +
                 'obj.method(argu);\n' +
                 'fun(argu);\n' +
                 'var fexp = function (v) {};\n' +
@@ -152,6 +152,14 @@ describe('Def-Use Analysis', function () {
             new DUPair(1, 3),
             new DUPair(1, 5)
         ]);
+        /// DU pairs of 'obj'
+        var dupairsOfobj = dupairs.get('obj').values();
+        dupairsOfobj.length.should.eql(1);
+        dupairsOfobj.should.containDeep([new DUPair(1, 2)]);
+        /// DU pairs of 'fexp'
+        var dupairsOffexp = dupairs.get('fexp').values();
+        dupairsOffexp.length.should.eql(1);
+        dupairsOffexp.should.containDeep([new DUPair(4, 5)]);
     });
 
     it('should work for switch', function () {
