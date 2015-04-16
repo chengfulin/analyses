@@ -443,6 +443,10 @@ describe('USE set', function () {
         cfg[2][12].astNode.test.value.should.eql(5);
         DFA.USE(cfg[2][10]).values().should.eql(['test']);
         DFA.USE(cfg[2][12]).values().should.eql(['test']);
+        /// switch default case
+        (cfg[2][13].astNode.test === null).should.be.ok;
+        /// no use
+        DFA.USE(cfg[2][13]).values().should.be.empty;
         /// variable used in consequence of switch case
         /// in case 1
         DFA.USE(cfg[2][3]).values().should.eql(['test']);
