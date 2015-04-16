@@ -251,5 +251,19 @@ describe('Reach Definitions', function () {
             new Def('out', 11),
             new Def('out', 14)
         ]);
+        /// RD(n7) n7: 'out = test * test;'
+        var n7RD = output.get(cfg[2][7]).values();
+        n7RD.length.should.eql(2);
+        n7RD.should.containDeep([
+            new Def('test', 1),
+            new Def('out', 1)
+        ]);
+        /// RD(n11) n7: 'out = test * test;'
+        var n11RD = output.get(cfg[2][11]).values();
+        n11RD.length.should.eql(2);
+        n11RD.should.containDeep([
+            new Def('test', 1),
+            new Def('out', 1)
+        ]);
     });
 });
